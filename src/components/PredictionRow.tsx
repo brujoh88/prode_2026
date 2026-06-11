@@ -98,6 +98,10 @@ export function PredictionRow({
   const kickoff = new Date(match.utc_kickoff);
   const yaEmpezo = ahora ? kickoff <= ahora : false;
   const terminado = match.status === "FINISHED";
+  // football-data (plan free) a veces marca FINISHED antes de publicar los
+  // goles: hasta que lleguen no hay que puntuar nada
+  const sinResultado =
+    terminado && (match.home_score === null || match.away_score === null);
   const enJuego = yaEmpezo && !terminado;
   const countdown = ahora && !yaEmpezo ? cuentaRegresiva(kickoff, ahora) : null;
   const conArgentina = esArgentina(match);
@@ -231,7 +235,11 @@ export function PredictionRow({
       {/* Acción / estado del pronóstico */}
       <div className="mt-2.5 flex min-h-9 items-center justify-center">
         {terminado ? (
-          guardado && prediction ? (
+          sinResultado ? (
+            <span className="text-xs opacity-50">
+              ⏳ Terminó, esperando el resultado oficial…
+            </span>
+          ) : guardado && prediction ? (
             <span
               className={`rounded-full px-3 py-1 text-xs font-bold ${PUNTOS_ESTILO[prediction.points]?.clase ?? ""}`}
             >

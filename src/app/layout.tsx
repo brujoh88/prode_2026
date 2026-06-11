@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/Header";
+import { LiveRefresh } from "@/components/LiveRefresh";
 import type { LeaderboardRow } from "@/lib/types";
 import "./globals.css";
 
@@ -66,6 +67,7 @@ export default async function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         {user && <Header apodo={apodo} puntos={puntos} posicion={posicion} />}
+        {user && <LiveRefresh />}
         {children}
         <Toaster position="bottom-center" richColors closeButton />
       </body>

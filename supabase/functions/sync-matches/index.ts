@@ -2,7 +2,7 @@
 // football-data.org y los escribe en la tabla `matches`.
 //
 // Corre dentro de Supabase (no depende de la app Next.js). Se dispara desde
-// pg_cron cada 15 min — ver la migración `sync_matches_cron`.
+// pg_cron cada 5 min — ver la migración `sync_matches_cron_5min`.
 //
 // Al pasar un partido a FINISHED, el trigger `trg_recalc_points` recalcula los
 // puntos de los pronósticos de ese partido. Acá no hay scoring.

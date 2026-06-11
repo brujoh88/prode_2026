@@ -12,7 +12,7 @@ RLS) · football-data.org (fixture y resultados).
 - Elegís tu apodo: es **único** por persona (índice único sobre `lower(display_name)`).
 - Cargás tu pronóstico por partido **antes del saque** (lo garantiza RLS, no la UI).
 - No ves los pronósticos ajenos hasta que el partido arranca (RLS también).
-- Los resultados se sincronizan solos cada 15 min (ver [Sincronización](#sincronización-de-resultados)).
+- Los resultados se sincronizan solos cada 5 min (ver [Sincronización](#sincronización-de-resultados)).
 - Al terminar cada partido, un trigger de Postgres recalcula los puntos:
   **3** resultado exacto · **1** acierto de signo (1X2) · **0** errado.
 - `/grupos` muestra la tabla de posiciones de cada zona + su fixture.
@@ -42,7 +42,7 @@ El fixture y los resultados salen de **football-data.org** (competición `WC`).
 Hay dos caminos para traerlos, con la misma lógica de mapeo:
 
 - **Automático (producción):** una **Supabase Edge Function** (`sync-matches`) que
-  un job de **`pg_cron`** dispara **cada 15 min** (`*/15 * * * *`). Corre dentro de
+  un job de **`pg_cron`** dispara **cada 5 min** (`*/5 * * * *`). Corre dentro de
   Supabase, así que no depende de que la app Next.js esté levantada ni deployada.
   El cron invoca la función con `net.http_post`, autenticando con el *anon key*
   (guardado en Vault como `sync_anon_key`); la función, por dentro, escribe en
@@ -72,7 +72,7 @@ select jobid, schedule, jobname, active from cron.job;
 select * from cron.job_run_details order by start_time desc limit 10;
 
 -- Pausar / reanudar / borrar
-select cron.unschedule('sync-matches-cada-15min');
+select cron.unschedule('sync-matches-cada-5min');
 ```
 
 > **Límites del plan free de football-data.org:** 10 req/min y resultados con
@@ -110,5 +110,5 @@ select cron.unschedule('sync-matches-cada-15min');
 - `leaderboard` — vista agregada con puntos, exactos y signos.
 - Scoring: `calculate_points()` + trigger `trg_recalc_points` sobre `matches`.
 - Sync automático: extensiones `pg_cron` + `pg_net`, secret `sync_anon_key` en
-  Vault y job `sync-matches-cada-15min` (migraciones `enable_pg_cron_and_pg_net`
+  Vault y job `sync-matches-cada-5min` (migraciones `enable_pg_cron_and_pg_net`
   y `sync_matches_cron`).
