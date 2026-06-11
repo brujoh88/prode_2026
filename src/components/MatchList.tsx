@@ -3,19 +3,10 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { PredictionRow } from "@/components/PredictionRow";
+import { ETAPAS } from "@/lib/etapas";
 import type { Match, Prediction } from "@/lib/types";
 
 const TZ = "America/Argentina/Buenos_Aires";
-
-const ETAPAS: Record<string, string> = {
-  GROUP_STAGE: "Fase de grupos",
-  LAST_32: "32avos de final",
-  LAST_16: "Octavos de final",
-  QUARTER_FINALS: "Cuartos de final",
-  SEMI_FINALS: "Semifinales",
-  THIRD_PLACE: "Tercer puesto",
-  FINAL: "Final",
-};
 
 const contenedor = {
   hidden: {},
@@ -70,6 +61,14 @@ export function MatchList({
     grupos.get(dia)!.push(m);
   }
 
+  // Los próximos también agrupados por día, para mostrar la fecha en la vista compacta
+  const gruposProximos = new Map<string, Match[]>();
+  for (const m of proximos) {
+    const dia = diaDe(m.utc_kickoff);
+    if (!gruposProximos.has(dia)) gruposProximos.set(dia, []);
+    gruposProximos.get(dia)!.push(m);
+  }
+
   function renderPartido(m: Match) {
     return (
       <motion.div key={m.id} variants={item}>
@@ -114,7 +113,21 @@ export function MatchList({
           >
             Próximos partidos
           </motion.h2>
-          <div className="flex flex-col gap-2.5">{proximos.map(renderPartido)}</div>
+          <div className="flex flex-col gap-5">
+            {[...gruposProximos.entries()].map(([dia, partidos]) => (
+              <div key={dia}>
+                <motion.p
+                  variants={item}
+                  className="mb-2 text-xs font-bold capitalize text-celeste-oscuro/75"
+                >
+                  {dia}
+                </motion.p>
+                <div className="flex flex-col gap-2.5">
+                  {partidos.map(renderPartido)}
+                </div>
+              </div>
+            ))}
+          </div>
           <motion.button
             variants={item}
             onClick={() => setVerTodos(true)}

@@ -28,15 +28,24 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Azul noche con vida, no negro apagado.
+   Se aplica si el sistema pide oscuro y el usuario no eligió claro,
+   o si el usuario eligió oscuro a mano (data-theme="dark"). */
 @media (prefers-color-scheme: dark) {
-  :root {
-    /* Azul noche con vida, no negro apagado */
+  :root:not([data-theme="light"]) {
     --background: #102536;
     --foreground: #e9f1f8;
     --celeste-claro: #1d3a52;
     --card: #16314a;
     --borde: rgba(116, 172, 223, 0.26);
   }
+}
+:root[data-theme="dark"] {
+  --background: #102536;
+  --foreground: #e9f1f8;
+  --celeste-claro: #1d3a52;
+  --card: #16314a;
+  --borde: rgba(116, 172, 223, 0.26);
 }
 
 body {
@@ -63,4 +72,41 @@ input[type="number"]::-webkit-inner-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
+}
+
+/* Conectores del cuadro de llaves (vista desktop).
+   Cada columna reparte sus partidos en celdas de igual alto (flex-1), así que
+   el centro de cada card está siempre al 50% de su celda. La barra vertical la
+   dibuja la celda impar (arriba del par) y une su centro con el de la celda par
+   de abajo (a un alto de celda = 100%). */
+.llave-celda {
+  position: relative;
+  display: flex;
+  flex: 1 1 0%;
+  align-items: center;
+}
+.llave-celda > * {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* Línea horizontal de salida hacia la ronda siguiente */
+.llave-celda.con-salida::after {
+  content: "";
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  width: 2rem;
+  height: 2px;
+  background: var(--borde);
+  transform: translateY(-50%);
+}
+/* Barra vertical que une cada par */
+.llave-celda.con-salida:nth-child(odd)::before {
+  content: "";
+  position: absolute;
+  left: calc(100% + 2rem - 2px);
+  top: 50%;
+  height: 100%;
+  width: 2px;
+  background: var(--borde);
 }

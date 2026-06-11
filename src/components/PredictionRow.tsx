@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { useAhoraMs } from "@/lib/useAhora";
 import { nombrePais, esArgentina } from "@/lib/paises";
 import type { Match, Prediction } from "@/lib/types";
 
@@ -55,9 +56,14 @@ function Bandera({ src, alt }: { src: string | null; alt: string }) {
 function cuentaRegresiva(kickoff: Date, ahora: Date): string | null {
   const ms = kickoff.getTime() - ahora.getTime();
   if (ms <= 0 || ms > 24 * 60 * 60 * 1000) return null;
-  const horas = Math.floor(ms / 3_600_000);
-  const minutos = Math.floor((ms % 3_600_000) / 60_000);
-  return horas > 0 ? `Cierra en ${horas} h ${minutos} m` : `¡Cierra en ${minutos} m!`;
+  const totalSeg = Math.floor(ms / 1000);
+  const horas = Math.floor(totalSeg / 3600);
+  const minutos = Math.floor((totalSeg % 3600) / 60);
+  const segundos = totalSeg % 60;
+  const dosD = (n: number) => String(n).padStart(2, "0");
+  return horas > 0
+    ? `Cierra en ${horas}:${dosD(minutos)}:${dosD(segundos)}`
+    : `¡Cierra en ${minutos}:${dosD(segundos)}!`;
 }
 
 export function PredictionRow({
@@ -79,14 +85,9 @@ export function PredictionRow({
     prediction ? { h: prediction.pred_home, a: prediction.pred_away } : null
   );
   const [guardando, setGuardando] = useState(false);
-  // El reloj vive solo en el cliente para evitar mismatch de hidratación
-  const [ahora, setAhora] = useState<Date | null>(null);
-
-  useEffect(() => {
-    setAhora(new Date());
-    const timer = setInterval(() => setAhora(new Date()), 60_000);
-    return () => clearInterval(timer);
-  }, []);
+  // Reloj compartido: tickea cada segundo en el cliente (null hasta montar)
+  const ahoraMs = useAhoraMs();
+  const ahora = ahoraMs === null ? null : new Date(ahoraMs);
 
   useEffect(() => {
     if (match.status === "FINISHED" && prediction?.points === 3) {
@@ -159,7 +160,7 @@ export function PredictionRow({
           <span className="font-bold text-celeste-oscuro">🇦🇷 ¡Juega la Scaloneta!</span>
         )}
         {countdown && (
-          <span className="ml-auto rounded-full bg-dorado/20 px-2 py-0.5 font-bold text-dorado-oscuro dark:text-dorado">
+          <span className="ml-auto rounded-full bg-dorado/20 px-2 py-0.5 font-bold tabular-nums text-dorado-oscuro dark:text-dorado">
             ⏱ {countdown}
           </span>
         )}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/LogoutButton";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 function SolDeMayo() {
   // Sol de mayo simplificado: disco con rayos rectos y ondulados alternados
@@ -36,6 +37,7 @@ function SolDeMayo() {
 const LINKS = [
   { href: "/", label: "Partidos" },
   { href: "/grupos", label: "Grupos" },
+  { href: "/llaves", label: "Llaves" },
   { href: "/tabla", label: "Tabla" },
 ];
 
@@ -65,13 +67,13 @@ export function Header({
       }`}
     >
       <nav
-        className={`mx-auto flex max-w-3xl items-center gap-3 px-3 transition-all duration-300 sm:gap-5 sm:px-4 ${
+        className={`mx-auto flex max-w-3xl flex-wrap items-center gap-x-4 gap-y-1 px-3 transition-all duration-300 sm:flex-nowrap sm:gap-x-5 sm:px-4 ${
           scrolleado ? "py-1.5" : "py-2.5"
         }`}
       >
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-1.5 text-base font-black tracking-tight sm:text-lg"
+          className="order-1 flex shrink-0 items-center gap-1.5 text-base font-black tracking-tight sm:text-lg"
         >
           <SolDeMayo />
           <span>Prode 2026</span>
@@ -80,23 +82,26 @@ export function Header({
           </span>
         </Link>
 
-        {LINKS.map((l) => (
-          <Link
-            key={l.href}
-            href={l.href}
-            className={`min-h-11 content-center text-sm font-medium hover:underline ${
-              pathname === l.href ? "underline underline-offset-4" : ""
-            }`}
-          >
-            {l.label}
-          </Link>
-        ))}
+        {/* Navegación: fila propia en mobile, inline en sm+ */}
+        <div className="order-3 flex w-full items-center gap-4 sm:order-2 sm:w-auto sm:gap-5">
+          {LINKS.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={`min-h-9 content-center text-sm font-medium hover:underline sm:min-h-11 ${
+                pathname === l.href ? "underline underline-offset-4" : ""
+              }`}
+            >
+              {l.label}
+            </Link>
+          ))}
+        </div>
 
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <div className="order-2 ml-auto flex items-center gap-2 sm:order-3 sm:gap-3">
           {posicion !== null && (
             <Link
               href="/tabla"
-              className="rounded-full bg-dorado px-2.5 py-1 text-xs font-bold text-celeste-profundo shadow-sm"
+              className="whitespace-nowrap rounded-full bg-dorado px-2.5 py-1 text-xs font-bold text-celeste-profundo shadow-sm"
               title="Tus puntos y tu posición"
             >
               ⭐ {puntos} pts · {posicion}°
@@ -111,6 +116,7 @@ export function Header({
               {apodo}
             </Link>
           )}
+          <ThemeToggle />
           <LogoutButton />
         </div>
       </nav>

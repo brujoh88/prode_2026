@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { PredictionRow } from "@/components/PredictionRow";
 import { nombrePais } from "@/lib/paises";
@@ -77,6 +77,11 @@ function tablaDelGrupo(partidos: Match[]): Posicion[] {
   );
 }
 
+function nombreGrupo(g: string): string {
+  // "GROUP_A" -> "A", "GROUP_B" -> "B"; deja intacto cualquier otro formato
+  return g.replace(/^GROUP[_\s-]?/i, "");
+}
+
 function Bandera({ src, alt }: { src: string | null; alt: string }) {
   if (!src) return <span className="text-sm opacity-50">⚽</span>;
   return (
@@ -109,6 +114,23 @@ export function GroupView({
     gruposDisponibles[0] ?? null
   );
 
+  const carruselRef = useRef<HTMLDivElement>(null);
+  const activoRef = useRef<HTMLButtonElement>(null);
+  function desplazar(dir: number) {
+    const el = carruselRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.85, behavior: "smooth" });
+  }
+
+  // Mantiene el grupo activo a la vista dentro del carrusel
+  useEffect(() => {
+    activoRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [grupoActivo]);
+
   const predPorPartido = new Map(predictions.map((p) => [p.match_id, p]));
 
   if (!gruposDisponibles.length) {
@@ -128,21 +150,45 @@ export function GroupView({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Selector de grupos */}
-      <div className="flex flex-wrap gap-2">
-        {gruposDisponibles.map((g) => (
-          <button
-            key={g}
-            onClick={() => setGrupoActivo(g)}
-            className={`min-h-9 rounded-full px-3.5 text-sm font-bold transition-colors ${
-              g === grupo
-                ? "bg-celeste-oscuro text-white shadow-sm"
-                : "bg-celeste-claro text-celeste-profundo hover:bg-celeste/20 dark:text-celeste"
-            }`}
-          >
-            Grupo {g}
-          </button>
-        ))}
+      {/* Selector de grupos — carrusel */}
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          aria-label="Grupos anteriores"
+          onClick={() => desplazar(-1)}
+          className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full border border-borde bg-card text-lg leading-none text-celeste-profundo transition-colors hover:bg-celeste-claro sm:flex dark:text-celeste"
+        >
+          ‹
+        </button>
+
+        <div
+          ref={carruselRef}
+          className="flex flex-1 snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {gruposDisponibles.map((g) => (
+            <button
+              key={g}
+              ref={g === grupo ? activoRef : null}
+              onClick={() => setGrupoActivo(g)}
+              className={`flex min-h-11 shrink-0 basis-[calc((100%-1rem)/3)] snap-start items-center justify-center rounded-xl px-2 text-sm font-bold transition-colors sm:basis-[calc((100%-1.5rem)/4)] ${
+                g === grupo
+                  ? "bg-celeste-oscuro text-white shadow-sm"
+                  : "bg-celeste-claro text-celeste-profundo hover:bg-celeste/20 dark:text-celeste"
+              }`}
+            >
+              Grupo {nombreGrupo(g)}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          aria-label="Grupos siguientes"
+          onClick={() => desplazar(1)}
+          className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full border border-borde bg-card text-lg leading-none text-celeste-profundo transition-colors hover:bg-celeste-claro sm:flex dark:text-celeste"
+        >
+          ›
+        </button>
       </div>
 
       <motion.div
@@ -207,7 +253,7 @@ export function GroupView({
         {/* Fixture del grupo */}
         <section>
           <h2 className="mb-2.5 text-sm font-bold text-celeste-oscuro">
-            Partidos del Grupo {grupo}
+            Partidos del Grupo {nombreGrupo(grupo)}
           </h2>
           <div className="flex flex-col gap-2.5">
             {partidosGrupo.map((m) => (
