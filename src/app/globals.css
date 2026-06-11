@@ -1,26 +1,66 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6fafd;
+  --foreground: #14202b;
+  --celeste: #74acdf;
+  --celeste-claro: #e3eff9;
+  --celeste-oscuro: #4a8ac4;
+  --celeste-profundo: #2d6fa8;
+  --dorado: #f6b40e;
+  --dorado-oscuro: #d99e1b;
+  --card: #ffffff;
+  --borde: rgba(45, 111, 168, 0.18);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-celeste: var(--celeste);
+  --color-celeste-claro: var(--celeste-claro);
+  --color-celeste-oscuro: var(--celeste-oscuro);
+  --color-celeste-profundo: var(--celeste-profundo);
+  --color-dorado: var(--dorado);
+  --color-dorado-oscuro: var(--dorado-oscuro);
+  --color-card: var(--card);
+  --color-borde: var(--borde);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* Azul noche con vida, no negro apagado */
+    --background: #102536;
+    --foreground: #e9f1f8;
+    --celeste-claro: #1d3a52;
+    --card: #16314a;
+    --borde: rgba(116, 172, 223, 0.26);
   }
 }
 
 body {
-  background: var(--background);
+  /* Franjas albicelestes muy suaves, como la camiseta de la Selección */
+  background-color: var(--background);
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(116, 172, 223, 0.07) 0px,
+    rgba(116, 172, 223, 0.07) 56px,
+    transparent 56px,
+    transparent 112px
+  );
+  background-attachment: fixed;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Sin spinners en inputs numéricos, en cualquier navegador */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
