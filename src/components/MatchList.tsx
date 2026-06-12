@@ -22,6 +22,14 @@ const item = {
   },
 };
 
+type Pestana = "anteriores" | "hoy" | "proximos";
+
+const PESTANAS: { id: Pestana; label: string }[] = [
+  { id: "anteriores", label: "⏪ Anteriores" },
+  { id: "hoy", label: "🔥 Hoy" },
+  { id: "proximos", label: "Próximos ⏩" },
+];
+
 function diaDe(fechaUtc: string): string {
   return new Date(fechaUtc).toLocaleDateString("es-AR", {
     weekday: "long",
@@ -41,7 +49,6 @@ export function MatchList({
   userId: string;
 }) {
   const [verTodos, setVerTodos] = useState(false);
-  const [verAnteriores, setVerAnteriores] = useState(false);
   const predPorPartido = new Map(predictions.map((p) => [p.match_id, p]));
   const ahora = new Date();
   const hoy = diaDe(ahora.toISOString());
@@ -52,6 +59,10 @@ export function MatchList({
   // Días anteriores a hoy (ya jugados) y días posteriores (por venir)
   const pasados = resto.filter((m) => new Date(m.utc_kickoff) < ahora);
   const futuros = resto.filter((m) => new Date(m.utc_kickoff) >= ahora);
+
+  const [pestana, setPestana] = useState<Pestana>(
+    deHoy.length > 0 ? "hoy" : "proximos"
+  );
 
   // En la vista compacta mostramos solo los próximos 5 partidos que todavía no arrancaron
   const proximos = futuros.slice(0, 5);
@@ -68,30 +79,19 @@ export function MatchList({
     0
   );
 
-  // Grupos por día de los futuros (orden natural ascendente)
-  const grupos = new Map<string, Match[]>();
-  for (const m of futuros) {
-    const dia = diaDe(m.utc_kickoff);
-    if (!grupos.has(dia)) grupos.set(dia, []);
-    grupos.get(dia)!.push(m);
+  function agruparPorDia(lista: Match[]): [string, Match[]][] {
+    const grupos = new Map<string, Match[]>();
+    for (const m of lista) {
+      const dia = diaDe(m.utc_kickoff);
+      if (!grupos.has(dia)) grupos.set(dia, []);
+      grupos.get(dia)!.push(m);
+    }
+    return [...grupos.entries()];
   }
 
-  // Los próximos también agrupados por día, para mostrar la fecha en la vista compacta
-  const gruposProximos = new Map<string, Match[]>();
-  for (const m of proximos) {
-    const dia = diaDe(m.utc_kickoff);
-    if (!gruposProximos.has(dia)) gruposProximos.set(dia, []);
-    gruposProximos.get(dia)!.push(m);
-  }
-
-  // Anteriores agrupados por día, del más reciente al más viejo
-  const gruposPasados = new Map<string, Match[]>();
-  for (const m of pasados) {
-    const dia = diaDe(m.utc_kickoff);
-    if (!gruposPasados.has(dia)) gruposPasados.set(dia, []);
-    gruposPasados.get(dia)!.push(m);
-  }
-  const gruposPasadosOrden = [...gruposPasados.entries()].reverse();
+  const gruposFuturos = agruparPorDia(mostrarColapsado ? proximos : futuros);
+  // Anteriores del día más reciente al más viejo
+  const gruposPasados = agruparPorDia(pasados).reverse();
 
   function renderPartido(m: Match) {
     return (
@@ -110,126 +110,128 @@ export function MatchList({
     );
   }
 
-  return (
-    <motion.div
-      variants={contenedor}
-      initial="hidden"
-      animate="visible"
-      className="flex flex-col gap-7"
-    >
-      {deHoy.length > 0 && (
-        <section>
-          <motion.h2
-            variants={item}
-            className="mb-2.5 inline-block rounded-full bg-celeste px-4 py-1.5 text-sm font-black uppercase tracking-wide text-white shadow-sm"
-          >
-            🔥 Se juega hoy
-          </motion.h2>
-          <div className="flex flex-col gap-2.5">{deHoy.map(renderPartido)}</div>
-        </section>
-      )}
-
-      {mostrarColapsado ? (
-        <section>
-          <motion.h2
-            variants={item}
-            className="mb-2.5 text-sm font-bold text-celeste-oscuro"
-          >
-            Próximos partidos
-          </motion.h2>
-          <div className="flex flex-col gap-5">
-            {[...gruposProximos.entries()].map(([dia, partidos]) => (
-              <div key={dia}>
-                <motion.p
-                  variants={item}
-                  className="mb-2 text-xs font-bold capitalize text-celeste-oscuro/75"
-                >
-                  {dia}
-                </motion.p>
-                <div className="flex flex-col gap-2.5">
-                  {partidos.map(renderPartido)}
-                </div>
-              </div>
-            ))}
-          </div>
-          <motion.button
-            variants={item}
-            onClick={() => setVerTodos(true)}
-            className="mt-4 w-full rounded-xl border border-celeste-oscuro/40 bg-celeste-claro py-3 text-sm font-bold text-celeste-profundo transition-colors hover:bg-celeste/20 dark:text-celeste"
-          >
-            Ver todos los próximos ({futuros.length})
-          </motion.button>
-        </section>
-      ) : (
-        [...grupos.entries()].map(([dia, partidos]) => (
-          <section key={dia}>
-            <motion.h2
+  function renderGruposPorDia(grupos: [string, Match[]][]) {
+    return (
+      <div className="flex flex-col gap-5">
+        {grupos.map(([dia, partidos]) => (
+          <div key={dia}>
+            <motion.p
               variants={item}
-              className="mb-2.5 text-sm font-bold capitalize text-celeste-oscuro"
+              className="mb-2 text-xs font-bold capitalize text-celeste-oscuro/75"
             >
               {dia}
-            </motion.h2>
+            </motion.p>
             <div className="flex flex-col gap-2.5">
               {partidos.map(renderPartido)}
             </div>
-          </section>
-        ))
-      )}
+          </div>
+        ))}
+      </div>
+    );
+  }
 
-      {pasados.length > 0 && (
-        <section>
-          {verAnteriores ? (
-            <>
-              <motion.div
-                variants={item}
-                className="mb-2.5 flex flex-wrap items-center gap-2"
-              >
-                <h2 className="text-sm font-bold text-celeste-oscuro">
-                  Partidos anteriores
-                </h2>
-                {pasadosConPunto.length > 0 && (
-                  <span className="rounded-full bg-green-500/15 px-2.5 py-0.5 text-xs font-bold text-green-600 dark:text-green-400">
-                    {exactos} {exactos === 1 ? "clavada" : "clavadas"} · {puntosPasados} pts
-                  </span>
-                )}
-              </motion.div>
-              <div className="flex flex-col gap-5">
-                {gruposPasadosOrden.map(([dia, partidos]) => (
-                  <div key={dia}>
-                    <motion.p
-                      variants={item}
-                      className="mb-2 text-xs font-bold capitalize text-celeste-oscuro/75"
-                    >
-                      {dia}
-                    </motion.p>
-                    <div className="flex flex-col gap-2.5">
-                      {partidos.map(renderPartido)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <motion.button
-                variants={item}
-                onClick={() => setVerAnteriores(false)}
-                className="mt-4 w-full rounded-xl border border-borde py-3 text-sm font-bold opacity-70 transition-colors hover:opacity-100"
-              >
-                Ocultar partidos anteriores
-              </motion.button>
-            </>
-          ) : (
-            <motion.button
-              variants={item}
-              onClick={() => setVerAnteriores(true)}
-              className="w-full rounded-xl border border-borde bg-card py-3 text-sm font-bold text-celeste-oscuro shadow-sm transition-shadow hover:shadow-md dark:text-celeste"
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex rounded-xl border border-borde bg-card p-1 shadow-sm">
+        {PESTANAS.map((p) => {
+          const activa = pestana === p.id;
+          return (
+            <button
+              key={p.id}
+              onClick={() => setPestana(p.id)}
+              className="relative flex-1 rounded-lg py-2 text-sm font-bold"
             >
-              ⏪ Ver partidos anteriores ({pasados.length})
-              {pasadosConPunto.length > 0 && (
-                <span className="opacity-70"> · {puntosPasados} pts</span>
+              {activa && (
+                <motion.span
+                  layoutId="pestana-activa"
+                  transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                  className="absolute inset-0 rounded-lg bg-celeste-oscuro"
+                />
               )}
-            </motion.button>
-          )}
-        </section>
-      )}
-    </motion.div>
+              <span
+                className={`relative z-10 transition-colors ${
+                  activa ? "text-white" : "text-celeste-oscuro opacity-70 dark:text-celeste"
+                }`}
+              >
+                {p.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <motion.div
+        key={pestana}
+        variants={contenedor}
+        initial="hidden"
+        animate="visible"
+        className="flex flex-col gap-7"
+      >
+        {pestana === "hoy" &&
+          (deHoy.length > 0 ? (
+            <section className="flex flex-col gap-2.5">
+              {deHoy.map(renderPartido)}
+            </section>
+          ) : (
+            <motion.p
+              variants={item}
+              className="rounded-xl border border-borde bg-card p-4 text-center text-sm opacity-70"
+            >
+              Hoy no se juega ningún partido. Mirá los próximos ⏩
+            </motion.p>
+          ))}
+
+        {pestana === "proximos" && (
+          <section>
+            {futuros.length > 0 ? (
+              <>
+                {renderGruposPorDia(gruposFuturos)}
+                {mostrarColapsado && (
+                  <motion.button
+                    variants={item}
+                    onClick={() => setVerTodos(true)}
+                    className="mt-4 w-full rounded-xl border border-celeste-oscuro/40 bg-celeste-claro py-3 text-sm font-bold text-celeste-profundo transition-colors hover:bg-celeste/20 dark:text-celeste"
+                  >
+                    Ver todos los próximos ({futuros.length})
+                  </motion.button>
+                )}
+              </>
+            ) : (
+              <motion.p
+                variants={item}
+                className="rounded-xl border border-borde bg-card p-4 text-center text-sm opacity-70"
+              >
+                No quedan partidos por jugar. ¡Se terminó el Mundial! 🏆
+              </motion.p>
+            )}
+          </section>
+        )}
+
+        {pestana === "anteriores" && (
+          <section>
+            {pasados.length > 0 ? (
+              <>
+                {pasadosConPunto.length > 0 && (
+                  <motion.div variants={item} className="mb-2.5">
+                    <span className="rounded-full bg-green-500/15 px-2.5 py-0.5 text-xs font-bold text-green-600 dark:text-green-400">
+                      {exactos} {exactos === 1 ? "clavada" : "clavadas"} ·{" "}
+                      {puntosPasados} pts
+                    </span>
+                  </motion.div>
+                )}
+                {renderGruposPorDia(gruposPasados)}
+              </>
+            ) : (
+              <motion.p
+                variants={item}
+                className="rounded-xl border border-borde bg-card p-4 text-center text-sm opacity-70"
+              >
+                Todavía no hay partidos jugados.
+              </motion.p>
+            )}
+          </section>
+        )}
+      </motion.div>
+    </div>
   );
 }

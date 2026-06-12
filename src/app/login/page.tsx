@@ -7,18 +7,32 @@ import { createClient } from "@/lib/supabase/client";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
-  const [estado, setEstado] = useState<"idle" | "enviando" | "enviado" | "error">("idle");
+  const [estado, setEstado] = useState<
+    "idle" | "enviando" | "enviado" | "confirmar" | "error"
+  >("idle");
   const searchParams = useSearchParams();
   const errorAuth = searchParams.get("error");
 
-  async function enviarMagicLink() {
+  // Primero intenta sin crear usuario: si el email ya existe le llega el link.
+  // Si no existe, pide confirmación antes de crear la cuenta — así un typo
+  // no genera un usuario fantasma.
+  async function enviarMagicLink(crearCuenta: boolean) {
     setEstado("enviando");
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` },
+      options: {
+        emailRedirectTo: `${location.origin}/auth/callback`,
+        shouldCreateUser: crearCuenta,
+      },
     });
-    setEstado(error ? "error" : "enviado");
+    if (!error) {
+      setEstado("enviado");
+    } else if (!crearCuenta && error.code === "otp_disabled") {
+      setEstado("confirmar");
+    } else {
+      setEstado("error");
+    }
   }
 
   return (
@@ -65,11 +79,36 @@ function LoginForm() {
             📬 ¡Va en camino! Fijate en tu casilla <strong>{email}</strong> y
             tocá el link. Si no aparece, revisá spam — no te quedes afuera.
           </motion.div>
+        ) : estado === "confirmar" ? (
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            className="flex flex-col gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-center"
+          >
+            <p>
+              🤔 <strong>{email}</strong> no está registrado. Revisá que esté
+              bien escrito. ¿Creamos una cuenta nueva con ese mail?
+            </p>
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={() => enviarMagicLink(true)}
+              className="h-12 rounded-lg bg-celeste-oscuro font-bold text-white transition-colors hover:bg-celeste-profundo"
+            >
+              Sí, crear mi cuenta
+            </motion.button>
+            <button
+              onClick={() => setEstado("idle")}
+              className="h-12 rounded-lg border border-borde font-bold transition-colors hover:bg-card"
+            >
+              Corregir el email
+            </button>
+          </motion.div>
         ) : (
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              enviarMagicLink();
+              enviarMagicLink(false);
             }}
             className="flex flex-col gap-3"
           >
