@@ -41,6 +41,7 @@ export function MatchList({
   userId: string;
 }) {
   const [verTodos, setVerTodos] = useState(false);
+  const [verAnteriores, setVerAnteriores] = useState(false);
   const predPorPartido = new Map(predictions.map((p) => [p.match_id, p]));
   const ahora = new Date();
   const hoy = diaDe(ahora.toISOString());
@@ -48,14 +49,28 @@ export function MatchList({
   const deHoy = matches.filter((m) => diaDe(m.utc_kickoff) === hoy);
   const resto = matches.filter((m) => diaDe(m.utc_kickoff) !== hoy);
 
-  // En la vista compacta mostramos solo los próximos partidos que todavía no arrancaron
+  // Días anteriores a hoy (ya jugados) y días posteriores (por venir)
+  const pasados = resto.filter((m) => new Date(m.utc_kickoff) < ahora);
   const futuros = resto.filter((m) => new Date(m.utc_kickoff) >= ahora);
+
+  // En la vista compacta mostramos solo los próximos 5 partidos que todavía no arrancaron
   const proximos = futuros.slice(0, 5);
-  const colapsable = resto.length > proximos.length;
+  const colapsable = futuros.length > proximos.length;
   const mostrarColapsado = colapsable && !verTodos;
 
+  // Resumen rápido de aciertos sobre los partidos anteriores ya puntuados
+  const pasadosConPunto = pasados.filter((m) => predPorPartido.has(m.id));
+  const exactos = pasadosConPunto.filter(
+    (m) => predPorPartido.get(m.id)!.points === 3
+  ).length;
+  const puntosPasados = pasadosConPunto.reduce(
+    (acc, m) => acc + (predPorPartido.get(m.id)!.points ?? 0),
+    0
+  );
+
+  // Grupos por día de los futuros (orden natural ascendente)
   const grupos = new Map<string, Match[]>();
-  for (const m of resto) {
+  for (const m of futuros) {
     const dia = diaDe(m.utc_kickoff);
     if (!grupos.has(dia)) grupos.set(dia, []);
     grupos.get(dia)!.push(m);
@@ -68,6 +83,15 @@ export function MatchList({
     if (!gruposProximos.has(dia)) gruposProximos.set(dia, []);
     gruposProximos.get(dia)!.push(m);
   }
+
+  // Anteriores agrupados por día, del más reciente al más viejo
+  const gruposPasados = new Map<string, Match[]>();
+  for (const m of pasados) {
+    const dia = diaDe(m.utc_kickoff);
+    if (!gruposPasados.has(dia)) gruposPasados.set(dia, []);
+    gruposPasados.get(dia)!.push(m);
+  }
+  const gruposPasadosOrden = [...gruposPasados.entries()].reverse();
 
   function renderPartido(m: Match) {
     return (
@@ -133,7 +157,7 @@ export function MatchList({
             onClick={() => setVerTodos(true)}
             className="mt-4 w-full rounded-xl border border-celeste-oscuro/40 bg-celeste-claro py-3 text-sm font-bold text-celeste-profundo transition-colors hover:bg-celeste/20 dark:text-celeste"
           >
-            Ver todos los partidos ({resto.length})
+            Ver todos los próximos ({futuros.length})
           </motion.button>
         </section>
       ) : (
@@ -150,6 +174,61 @@ export function MatchList({
             </div>
           </section>
         ))
+      )}
+
+      {pasados.length > 0 && (
+        <section>
+          {verAnteriores ? (
+            <>
+              <motion.div
+                variants={item}
+                className="mb-2.5 flex flex-wrap items-center gap-2"
+              >
+                <h2 className="text-sm font-bold text-celeste-oscuro">
+                  Partidos anteriores
+                </h2>
+                {pasadosConPunto.length > 0 && (
+                  <span className="rounded-full bg-green-500/15 px-2.5 py-0.5 text-xs font-bold text-green-600 dark:text-green-400">
+                    {exactos} {exactos === 1 ? "clavada" : "clavadas"} · {puntosPasados} pts
+                  </span>
+                )}
+              </motion.div>
+              <div className="flex flex-col gap-5">
+                {gruposPasadosOrden.map(([dia, partidos]) => (
+                  <div key={dia}>
+                    <motion.p
+                      variants={item}
+                      className="mb-2 text-xs font-bold capitalize text-celeste-oscuro/75"
+                    >
+                      {dia}
+                    </motion.p>
+                    <div className="flex flex-col gap-2.5">
+                      {partidos.map(renderPartido)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <motion.button
+                variants={item}
+                onClick={() => setVerAnteriores(false)}
+                className="mt-4 w-full rounded-xl border border-borde py-3 text-sm font-bold opacity-70 transition-colors hover:opacity-100"
+              >
+                Ocultar partidos anteriores
+              </motion.button>
+            </>
+          ) : (
+            <motion.button
+              variants={item}
+              onClick={() => setVerAnteriores(true)}
+              className="w-full rounded-xl border border-borde bg-card py-3 text-sm font-bold text-celeste-oscuro shadow-sm transition-shadow hover:shadow-md dark:text-celeste"
+            >
+              ⏪ Ver partidos anteriores ({pasados.length})
+              {pasadosConPunto.length > 0 && (
+                <span className="opacity-70"> · {puntosPasados} pts</span>
+              )}
+            </motion.button>
+          )}
+        </section>
       )}
     </motion.div>
   );
